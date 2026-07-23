@@ -1,110 +1,53 @@
-#ifndef DBPARSER_H
-#define DBPARSER_H
+#ifndef DB_PARSER_H
+#define DB_PARSER_H
 #include <iostream>
-#include <string>
 #include <map>
+#include <sstream>
+#include <string>
 #include "datastore.h"
-#include "product.h"
-#include "user.h"
 #include "product_parser.h"
 
-/**
- * Interface for all section parsers_
- *  A section parser parses everything between
- *  <section> ... </section> in the database file
- */
 class SectionParser {
 public:
-    virtual ~SectionParser() { }
-    /**
-     * Parses the section stored in the given istream
-     * Increments lineno after successfully parsing each lineno
-     * Sets errorMsg with a descriptive message upon an error
-     * Returns true if an error occurred.
-     */
-    virtual bool parse(std::istream& is, DataStore& ds,
-                       int& lineno, std::string& errorMsg) = 0;
-    /**
-     * Reports how many items were parsed
-     */
+    virtual ~SectionParser() {}
+    virtual bool parse(std::istream& is, DataStore& ds, int& lineno, std::string& errorMsg) = 0;
     virtual void reportItemsRead(std::ostream& os) = 0;
 };
 
-/**
- * Main parser utilizing section parsers to do most
- *  of the actual parsing.  Breaks the database into
- *  sections and handle error output
- */
 class DBParser {
 public:
     DBParser();
     ~DBParser();
-    /**
-     *  Registers a section parser that will be invoked
-     *  when a section with sectionName is found in the
-     *  database
-     */
-    void addSectionParser(const std::string& sectionName,
-                          SectionParser*         parser);
-    /**
-     *  Registers a section parser that will be invoked
-     *  when a section with sectionName is found in the
-     *  database. Returns true if an error occurs.
-     */
+    void addSectionParser(const std::string& sectionName, SectionParser* parser);
     bool parse(std::string db_filename, DataStore& ds);
-
 private:
     enum PState { FIND_SECTION, IN_SECTION };
-    int lineno_;
-    std::string errorMsg_;
-    bool error_;
     std::map<std::string, SectionParser*> parsers_;
-
+    int lineno_;
+    bool error_;
+    std::string errorMsg_;
 };
 
-
-/**
- * Product section parser.  Uses separate ProductParsers
- *  to parse each type of product
- */
-class ProductSectionParser : public SectionParser
-{
+class ProductSectionParser : public SectionParser {
 public:
     ProductSectionParser();
     ~ProductSectionParser();
-    virtual bool parse(std::istream& is, DataStore& ds,
-                       int& lineno, std::string& errorMsg);
-    virtual void reportItemsRead(std::ostream& os);
     void addProductParser(ProductParser* p);
-protected:
-    Product* parseProduct(const std::string& category,
-                          std::istream& is,
-                          int& lineno,
-                          std::string& errorMsg);
+    bool parse(std::istream& is, DataStore& ds, int& lineno, std::string& errorMsg);
+    void reportItemsRead(std::ostream& os);
 private:
+    Product* parseProduct(const std::string& category, std::istream& is, int& lineno, std::string& errorMsg);
     std::map<std::string, ProductParser*> prodParsers_;
-    unsigned int numRead_ ;
+    int numRead_;
 };
 
-/**
- * User section parser that parses and creates Users
- */
-class UserSectionParser : public SectionParser
-{
+class UserSectionParser : public SectionParser {
 public:
     UserSectionParser();
-    ~UserSectionParser() {}
-    virtual bool parse(std::istream& is, DataStore& ds,
-                       int& lineno, std::string& errorMsg);
-    virtual void reportItemsRead(std::ostream& os);
-protected:
-    User* parseUser(
-        std::istream& is,
-        DataStore& ds,
-        std::string& errorMsg);
+    bool parse(std::istream& is, DataStore& ds, int& lineno, std::string& errorMsg);
+    void reportItemsRead(std::ostream& os);
 private:
-
-    unsigned int numRead_ ;
-
+    User* parseUser(std::istream& is, DataStore& ds, std::string& errorMsg);
+    int numRead_;
 };
 #endif
